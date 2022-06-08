@@ -14236,62 +14236,75 @@ include::{code_dir}/usingSpecConstants.cpp[lines=4..-1]
 [[sec:interfaces.hosttasks.overview]]
 === Overview
 
-A <<host-task>> is a native {cpp} callable which is scheduled by the
-<<sycl-runtime>>. A <<host-task>> is submitted to a <<queue>> via a
-<<command-group>> by a <<host-task-command>>.
+A <<host-task>> is a native {cpp} callable which is scheduled and invoked on
+the host by the <<sycl-runtime>>. Therefore it does not have the same
+restrictions as a <<sycl-kernel-function>> and can contain arbitrary {cpp}
+code.
 
-When a <<host-task-command>> is submitted to a <<queue>> it is scheduled
-based on its data dependencies with other <<command,commands>> including
-<<kernel-invocation-command,kernel invocation commands>> and asynchronous copies, resolving any
-requisites created by <<accessor,accessors>> attached to the <<command-group>> as
-defined in <<sub.section.memmodel.app>>.
+A <<host-task>> is submitted to a <<queue>> via a <<command-group>> by a
+<<host-task-command>>. And all <<queue,queues>> support
+<<host-task-command,host task commands>>.
 
-Since a <<host-task>> is invoked directly by the <<sycl-runtime>> rather
-than being compiled as a <<sycl-kernel-function>>, it does not have the same
-restrictions as a <<sycl-kernel-function>>, and can therefore contain any
-arbitrary {cpp} code.
+When a <<host-task-command>> is submitted to a <<queue>> it is scheduled based
+on its explicit dependencies as well as its data dependencies with other
+<<command,commands>> including <<kernel-invocation-command,kernel invocation
+commands>> and asynchronous copies, and resolving any requisites created by
+<<accessor,accessors>> attached to the <<command-group>> as defined in
+<<sub.section.memmodel.app>>.
+
+A <<host-task-command>> can be either synchronous or asynchronous. The only
+difference between a synchronous <<host-task>> and an asynchronous
+<<host-task>>, is that the synchronous <<host-task>> guarantees that the {cpp}
+callable will have completed before the command submission returns.
+
+A <<host-task>> is enqueued on a <<queue>> via either the
+[code]#sync_host_task# or [code]#async_host_task# member functions of the
+[code]#handler# class, for the synchronous and asynchronous variants
+respectively.
+
+Any uncaught exception thrown during the execution of a <<host-task>> will be
+turned into an <<async-error>> that can be handled as described in
+<<subsubsec:exception.async>>.
 
 Capturing <<accessor,accessors>> in a <<host-task>> is allowed, however,
 capturing or using any other SYCL class that has reference semantics (see
 <<sec:reference-semantics>>) is undefined behavior.
 
-A <<host-task>> can be enqueued on any <<queue>> and the callable will be
-invoked directly by the SYCL runtime, regardless of which <<device>> the
-<<queue>> is associated with.
+A <<host-task,host task>> can be used for two purposes: either as a task which
+can perform arbitrary {cpp} code within the scheduling of the <<sycl-runtime>>
+or as a task which can perform interoperability at a point within the
+scheduling of the <<sycl-runtime>>.
 
-A <<host-task>> is enqueued on a <<queue>> via the [code]#host_task#
-member function of the [code]#handler# class.
-The <<event>> returned by the submission of the associated <<command group>>
-enters the completed state (corresponding to a status of
+For the first use case, the {cpp} callable doesn't take any parameters and
+buffer or image accessors with [code]#target::host_task# or
+[code]#image_target::host_task# may be used. These accessors make the buffer or
+image available on the host when the callable is executed.
+
+For the second use case, the {cpp} callable takes a reference to an
+[code]#interop_handle#. This handle is used for interoperability with
+<<native-backend-object,native backend objects>> associated with the
+<<host-task-command>> submission. In this case buffer or image accessors with
+[code]#target::device#, [code]#target::constant_buffer# or
+[code]#image_target::device# can also be captured, however these accessors can
+only be used for interoperability through the [code]#interop_handle# interface.
+As opposed to the first use case, when using the [code]#interop_handle#, the
+<<sycl-runtime>> may not have resolved all of the dependencies when the {cpp}
+callable is called, instead some of the dependencies may be accessible as
+<<native-backend-object, native backend objects>> through the
+[code]#get_native_events# member function of the [code]#interop_handle#. So
+when using a <<host-task>> for interoperability, it is the responsibility of
+the user to ensure any dependencies exposed through [code]#get_native_events#
+are resolved. In addition the [code]#add_events# member function of the
+[code]#interop_handle# may be used to propagate to the <<sycl-runtime>> any
+dependencies on asynchronous work that may have been started through
+interoperability.
+
+The <<event>> returned by the submission of the <<command group>> associated
+with a <<host-task>> enters the completed state (corresponding to a status of
 [code]#info::event_command_status::complete#) once the invocation of the
-provided {cpp} callable has returned.
-Any uncaught exception thrown during the execution of a <<host-task>> will be
-turned into an <<async-error>> that can be handled as described in
-<<subsubsec:exception.async>>.
-
-A <<host-task>> can optionally be used to interoperate with the
-<<native-backend-object,native backend objects>> associated with the <<queue>> executing the
-<<host-task>>, the <<context>> that the <<queue>> is associated with, the
-<<device>> that the <<queue>> is associated with  and the <<accessor,accessors>>
-that have been captured in the callable, via an optional
-[code]#interop_handle# parameter.
-
-This allows <<host-task,host tasks>> to be used for two purposes: either as a
-task which can perform arbitrary {cpp} code within the scheduling of the
-<<sycl-runtime>> or as a task which can perform interoperability at a point
-within the scheduling of the <<sycl-runtime>>.
-
-For the former use case, construct a buffer accessor with
-[code]#target::host_task# or an image accessor with
-[code]#image_target::host_task#.  This makes the buffer or image available
-on the host during execution of the <<host-task>>.
-
-For the latter case, construct a buffer accessor with
-[code]#target::device# or [code]#target::constant_buffer#, or construct
-an image accessor with [code]#image_target::device#.  This makes the buffer or
-image available on the device that is associated with the queue used to submit
-the <<host-task>>, so that it can be accessed via interoperability member
-functions provided by the [code]#interop_handle# class.
+provided {cpp} callable has returned, and when using interoperability, once all
+the event <<native-backend-object, native backend objects>> provided through
+[code]#add_events# are complete.
 
 Local <<accessor,accessors>> cannot be used within a <<host-task>>.
 
@@ -14458,6 +14471,40 @@ _Throws:_ Must throw an [code]#exception# with the
 [code]#errc::backend_mismatch# error code if [code]#Backend != get_backend()#.
 --
 
+[[subsec:interfaces.hosttask.interophandle.events]]
+==== Event handling member functions
+
+[source,,linenums]
+----
+include::{header_dir}/hostTask/classInteropHandle/events.h[lines=4..-1]
+----
+
+  . _Constraints:_ Available only if the optional interoperability
+    function [code]#get_native# taking an [code]#event# is
+    available.
++
+--
+_Returns:_ A list of <<native-backend-object, native backend objects>>
+associated with <<event, events>> that represent any unresolved dependencies at
+the time of the <<host-task>> callable execution. It is the responsibility of
+the user to resolve these dependencies using the backend APIs.
+
+_Throws:_ Must throw an [code]#exception# with the
+[code]#errc::backend_mismatch# error code if [code]#Backend != get_backend()#.
+--
+  . _Constraints:_ Available only if the optional interoperability
+    function [code]#get_native# taking an [code]#event# is
+    available.
++
+--
+_Parameters_: A list of <<native-backend-object, native backend objects>>
+events, that need to be completed before the <<host-task>> can be considered
+completed.
+_Returns:_ No returns.
+
+_Throws:_ Must throw an [code]#exception# with the
+[code]#errc::backend_mismatch# error code if [code]#Backend != get_backend()#.
+--
 
 [[subsec:interfaces.hosttask.handler]]
 === Additions to the [code]#handler# class

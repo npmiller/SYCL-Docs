@@ -6,7 +6,10 @@ class handler {
 
  public:
   template <typename T>
-  void host_task(T &&hostTaskCallable); // (1)
+  void sync_host_task(T &&hostTaskCallable); // (1)
+                                             //
+  template <typename T>
+  void async_host_task(T &&hostTaskCallable); // (2)
 
   ...
 };

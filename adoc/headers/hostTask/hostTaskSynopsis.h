@@ -41,6 +41,11 @@ class interop_handle {
   template <backend Backend>
   backend_return_t<Backend, context> get_native_context() const;
 
+  template <backend Backend>
+  std::vector<backend_return_t<Backend, event>> get_native_events() const;
+
+  template <backend Backend>
+  void add_events(std::vector<backend_return_t<Backend, event>>);
 };
 
 class handler {
@@ -49,7 +54,10 @@ class handler {
  public:
 
   template <typename T>
-  void host_task(T &&hostTaskCallable);
+  void sync_host_task(T &&hostTaskCallable);
+
+  template <typename T>
+  void async_host_task(T &&hostTaskCallable);
 
   ...
 };
