@@ -14252,61 +14252,40 @@ commands>> and asynchronous copies, and resolving any requisites created by
 <<accessor,accessors>> attached to the <<command-group>> as defined in
 <<sub.section.memmodel.app>>.
 
-A <<host-task-command>> can be either synchronous or asynchronous. The only
-difference between a synchronous <<host-task>> and an asynchronous
-<<host-task>>, is that the synchronous <<host-task>> guarantees that the {cpp}
-callable will have completed before the command submission returns.
-
-A <<host-task>> is enqueued on a <<queue>> via either the
-[code]#sync_host_task# or [code]#async_host_task# member functions of the
-[code]#handler# class, for the synchronous and asynchronous variants
-respectively.
-
 Any uncaught exception thrown during the execution of a <<host-task>> will be
 turned into an <<async-error>> that can be handled as described in
 <<subsubsec:exception.async>>.
+
+A <<host-task,host task>> can be used as a task which can perform arbitrary
+{cpp} code within the scheduling of the <<sycl-runtime>> and additionally as a
+task which can perform interoperability at a point within the scheduling of the
+<<sycl-runtime>>.
 
 Capturing <<accessor,accessors>> in a <<host-task>> is allowed, however,
 capturing or using any other SYCL class that has reference semantics (see
 <<sec:reference-semantics>>) is undefined behavior.
 
-A <<host-task,host task>> can be used for two purposes: either as a task which
-can perform arbitrary {cpp} code within the scheduling of the <<sycl-runtime>>
-or as a task which can perform interoperability at a point within the
-scheduling of the <<sycl-runtime>>.
-
-For the first use case, the {cpp} callable doesn't take any parameters and
-buffer or image accessors with [code]#target::host_task# or
-[code]#image_target::host_task# may be used. These accessors make the buffer or
+A host task can use buffer or image accessors with [code]#target::host_task#,
+or [code]#image_target::host_task#. These accessors make the buffer or
 image available on the host when the callable is executed.
 
-For the second use case, the {cpp} callable takes a reference to an
-[code]#interop_handle#. This handle is used for interoperability with
-<<native-backend-object,native backend objects>> associated with the
-<<host-task-command>> submission. In this case buffer or image accessors with
-[code]#target::device#, [code]#target::constant_buffer# or
-[code]#image_target::device# can also be captured, however these accessors can
-only be used for interoperability through the [code]#interop_handle# interface.
-As opposed to the first use case, when using the [code]#interop_handle#, the
-<<sycl-runtime>> may not have resolved all of the dependencies when the {cpp}
-callable is called, instead some of the dependencies may be accessible as
-<<native-backend-object, native backend objects>> through the
-[code]#get_native_events# member function of the [code]#interop_handle#. So
-when using a <<host-task>> for interoperability, it is the responsibility of
-the user to ensure any dependencies exposed through [code]#get_native_events#
-are resolved. In addition the [code]#add_events# member function of the
-[code]#interop_handle# may be used to propagate to the <<sycl-runtime>> any
-dependencies on asynchronous work that may have been started through
-interoperability.
+A host task can use buffer or image accessors with [code]#target::device#,
+[code]#target::constant_buffer# or [code]#image_target::host_task#. These
+accessors can only be used for interoperability through the
+[code]#interop_handle#.
+
+Local <<accessor,accessors>> cannot be used within a <<host-task>>.
+
+The {cpp} callable can have either no parameters or one parameter, in which
+case it must be an [code]#interop_handle#. The {cpp} callabe can either return
+nothing, or a standard vector of native events.
 
 The <<event>> returned by the submission of the <<command group>> associated
 with a <<host-task>> enters the completed state (corresponding to a status of
 [code]#info::event_command_status::complete#) once the invocation of the
-provided {cpp} callable has returned, and when using interoperability, once all
-the event <<native-backend-object, native backend objects>> provided through
-[code]#add_events# are complete.
-
-Local <<accessor,accessors>> cannot be used within a <<host-task>>.
+provided {cpp} callable has returned, and if the callable has returned a vector
+of <<native-backend-object, native backend objects>> events, once all of these
+returned events are complete as well.
 
 // TODO: access mode/target resolution rules
 
@@ -14315,6 +14294,41 @@ Local <<accessor,accessors>> cannot be used within a <<host-task>>.
 include::{header_dir}/hostTask/hostTaskSynopsis.h[lines=4..-1]
 ----
 
+[[sec:interfaces.hosttasks.properties]]
+=== Properties
+
+[[table.properties.host_task]]
+.Properties supported by the SYCL [code]#host_task#
+[width="100%",options="header",separator="@",cols="65%,35%"]
+|====
+@ Property @ Description
+a@
+[source]
+----
+property::host_task::exec_on_submit
+----
+   a@ The [code]#exec_on_submit# property instructs the SYCL runtime to execute
+   the [code]#host_task# callable at submission. This means that with this
+   property the callable is guaranteed to have completed when the queue
+   submission returns.
+
+a@
+[source]
+----
+property::buffer::manual_interop_sync
+----
+   a@ The [code]#manual_interop_sync# property instructs the [code]#host_task#
+   that it may defer resolving dependencies to the user by providing
+   interoperability events through the [code]#interop_handle#'s
+   [code]#get_native_events# member function. This property can only be used
+   with a backend that supports event interoperability. When this property is
+   used, it is the user's responsibility to ensure that all the events returned
+   by [code]#get_native_events# are handled apropriately in the <<host-task>>
+   callable.  Accessing data from captured accessors before handling the
+   dependencies modeled by [code]#get_native_events# results undefined
+   behavior.
+
+|====
 
 [[subsec:interfaces.hosttasks.interophandle]]
 === Class [code]#interop_handle#

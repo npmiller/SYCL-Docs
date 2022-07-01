@@ -44,9 +44,21 @@ class interop_handle {
   template <backend Backend>
   std::vector<backend_return_t<Backend, event>> get_native_events() const;
 
-  template <backend Backend>
-  void add_events(std::vector<backend_return_t<Backend, event>>);
 };
+
+namespace property {
+namespace host_task {
+  class exec_on_submit {
+    public:
+      exec_on_submit() = default;
+  };
+
+  class manual_interop_sync {
+    public:
+      manual_interop_sync() = default;
+  };
+} // namespace host_task
+} // namespace property
 
 class handler {
   ...
@@ -54,10 +66,7 @@ class handler {
  public:
 
   template <typename T>
-  void sync_host_task(T &&hostTaskCallable);
-
-  template <typename T>
-  void async_host_task(T &&hostTaskCallable);
+  void host_task(T &&hostTaskCallable, const property_list &propList = {});
 
   ...
 };

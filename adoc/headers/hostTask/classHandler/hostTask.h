@@ -6,10 +6,7 @@ class handler {
 
  public:
   template <typename T>
-  void sync_host_task(T &&hostTaskCallable); // (1)
-                                             //
-  template <typename T>
-  void async_host_task(T &&hostTaskCallable); // (2)
-
+  void host_task(T &&hostTaskCallable, const property_list &propList = {}); // (1)
+                                                                            //
   ...
 };
