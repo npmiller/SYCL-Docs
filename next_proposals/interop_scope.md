@@ -49,6 +49,21 @@ There are three main parts of this proposal:
 
 ## Overview of `interop_scope`
 
+The `interop_scope` is a free function in the SYCL namespace, it takes a C++
+callable and returns a native backend event.
+
+The C++ callable takes a single `interop_scope_handle` parameter. This handle
+parameter can only be created internally by the `interop_scope` function and not
+by the user. The C++ callable may return a single SYCL event. The C++ callable
+can capture native backend objects, and then use the `interop_scope_handle` to
+transform the native backend objects into SYCL objects. All the SYCL objects
+created this way are guaranteed to have dropped reference to any native backend
+objects once the `interop_scope` function returns. However work on these native
+backend objects may still be on-going, this is modeled by the native backend
+event returned by the `interop_scope` function. It is the user's responsibility
+to handle this event appropriately when doing any further work on the native
+backend objects that were used in the `interop_scope` for SYCL interoperability.
+
 ```cpp
 // Copyright (c) 2011-2022 The Khronos Group, Inc.
 // SPDX-License-Identifier: MIT
