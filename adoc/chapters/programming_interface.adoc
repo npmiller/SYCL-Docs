@@ -14270,7 +14270,7 @@ or [code]#image_target::host_task#. These accessors make the buffer or
 image available on the host when the callable is executed.
 
 A host task can use buffer or image accessors with [code]#target::device#,
-[code]#target::constant_buffer# or [code]#image_target::host_task#. These
+[code]#target::constant_buffer# or [code]#image_target::device#. These
 accessors can only be used for interoperability through the
 [code]#interop_handle#.
 
