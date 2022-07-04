@@ -24,21 +24,23 @@ no way for the user to know if the SYCL runtime is really done with this handle.
 
 And so this raises the question of ownership of native backend handles, question
 which is not addressed by the SYCL specification and left to backend
-specification.
+specification. For some backends such as the OpenCL backend which uses reference
+counting for the backend objects this is not an issue, however for other
+backends there is currently no good solution to handle this.
 
 Thus, this proposal aims to solve this ownership issue by modifying existing
 interfaces and adding new alternatives.
 
 There are three main parts of this proposal:
 
-* Removal of the `get_native` interface, there is currently no way to know when
+* Removal of the `get_native` interface. There is currently no way to know when
   a handle returned from that interface can be safely used. The `host_task`
   interoperability should be used instead to access backend objects from SYCL
   objects.
-* Mandate that the `make_native` interface takes ownership of passed in backend
-  objects. This means that a user may not use a native backend object after it
-  has been turned into a SYCL object, and the SYCL runtime is responsible for
-  cleaning up the native handle.
+* Mandate that the `make_{SYCL object}` interface takes ownership of passed in
+  backend objects. This means that a user may not use a native backend object
+  after it has been turned into a SYCL object, and the SYCL runtime is
+  responsible for cleaning up the native handle.
 * Introduce an `interop_scope` interface, this interface provides a scoped
   environment in which SYCL objects may be created from native backend objects
   and used, however these SYCL objects are guaranteed to have limited lifetime,
