@@ -14285,7 +14285,12 @@ with a <<host-task>> enters the completed state (corresponding to a status of
 [code]#info::event_command_status::complete#) once the invocation of the
 provided {cpp} callable has returned, and if the callable has returned a vector
 of <<native-backend-object, native backend objects>> events, once all of these
-returned events are complete as well.
+returned events are complete as well. Note that it means that at the SYCL level
+it is only possible to synchronize with the interoperability work enqueued from
+one <<host-task>> all at once. If more granularity is required in synchronizing
+the interoperability work, then multiple <<host-task,host tasks>> should be
+used instead, to obtain separate SYCL events for specific interoperability
+operations.
 
 // TODO: access mode/target resolution rules
 
