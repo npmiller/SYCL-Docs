@@ -19940,7 +19940,7 @@ Using a group function inside of a kernel may introduce additional
 limits on the resources available to user code inside the same kernel.  The
 behavior of these limits is implementation-defined, but must be reflected by
 calls to kernel querying functions (such as
-[code]#kernel_bundle::get_kernel_info)# as described in <<sec:bundles.query>>.
+[code]#kernel_bundle::get_kernel_info#) as described in <<sec:bundles.query>>.
 
 It is undefined behavior for any group function to be invoked within a
 [code]#parallel_for_work_group# or [code]#parallel_for_work_item#
